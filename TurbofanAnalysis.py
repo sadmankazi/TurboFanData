@@ -1,12 +1,26 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-from sklearn import linear_model
-from sklearn.neural_network import MLPRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn import preprocessing
-# from sklearn.preprocessing import StandardScaler, MinMaxScaler
+# import seaborn as sns; sns.set()
+import time
+import numpy as np
+from pandas.plotting import scatter_matrix
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import LinearRegression, Lasso, ElasticNet
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.svm import SVR
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.ensemble import AdaBoostRegressor
+from sklearn.model_selection import RandomizedSearchCV
+import warnings
 from math import sqrt
 
 feat_names = ['Unit', 'CycleNo', 'opset1', 'opset2', 'opset3', 'sensor1', 'sensor2', 'sensor3', 'sensor4', 'sensor5',
@@ -18,12 +32,9 @@ data_train1 = pd.read_csv('./CMAPSSData/train_FD001.txt', sep=' ', header=None, 
 # data_test1 = pd.read_csv('./CMAPSSData/test_FD001.txt', sep = ' ', header = None)
 # data_RUL1 = pd.read_csv('./CMAPSSData/RUL_FD001.txt', sep = ' ', header = None)
 
-# data_train1.isna().sum() # Finding NaNs
+# print(data_train1.isna().sum()) # Finding NaNs
 
-# print(data_train1['Unit'].value_counts())
-
-# plt.plot(data_train1['Unit'].value_counts()) # no of data points per unit
-# plt.show()
+# print(data_train1.nunique()['Unit']) # Total number of units
 
 data_train1['RUL'] = ""
 
@@ -32,10 +43,6 @@ max_cycle = data_train1.groupby('Unit')['CycleNo'].max().reset_index()
 # print(max_cycle.loc[[1]])
 
 # print(data_train1[data_train1['Unit'] == 1]['RUL'])
-
-# Add checking for NaNs in all columns
-
-# print(max_cycle.iloc[2, 1])
 
 for x in max_cycle.iloc[:, 0]:
     count_cycle = max_cycle.iloc[x-1, 1]
@@ -51,9 +58,52 @@ df_normalized = pd.DataFrame(np_scaled)
 # print(df_normalized.head())
 
 X_train, X_test, y_train, y_test = train_test_split(df_normalized, data_train1["RUL"], test_size=0.7, random_state=5)
-leg = linear_model.LinearRegression()
-leg.fit(X_train, y_train)
-predictions = leg.predict(X_test)
+
+models = []
+models.append(('LR', LinearRegression()))
+models.append(('LASSO', Lasso()))
+models.append(('EN', ElasticNet()))
+models.append(('KNN', KNeighborsRegressor()))
+models.append(('CART', DecisionTreeRegressor()))
+models.append(('SVR', SVR()))
+models.append(('Bagging', RandomForestRegressor()))
+
+results = []
+names = []
+times = []
+num_folds = 7
+seed = 5
+
+for name, model in models:
+    kfold = KFold(n_splits=num_folds, random_state=seed)
+    start = time.time()
+    cv_results = cross_val_score(model, X_train, y_train, cv=kfold, scoring= 'neg_mean_squared_error')
+    run_time = time.time()-start
+    results.append(cv_results)
+    names.append(name)
+    times.append(run_time)
+    msg = "%s: %f (%f) %f" % (name, cv_results.mean(), cv_results.std(), run_time)
+    print(msg)
+
+# Create Visual for people
+fig = plt.figure()
+fig.suptitle('Algorithm Comparison')
+ax = fig.add_subplot(111)
+plt.boxplot(results)
+ax.set_xticklabels(names)
+plt.show()
+
+# Add a plot of MSE vs Time labeled with different regression algorithms when we come back
+fig1 = plt.figure()
+fig1.suptitle('Time Comparison')
+ax1 = fig.add_subplot(111)
+plt.plot(times, 'x', ms = 8)
+ax1.set_xticklabels(names)
+plt.show()
+
+# leg = linear_model.LinearRegression()
+# leg.fit(X_train, y_train)
+# predictions = leg.predict(X_test)
 
 # nn = MLPRegressor(hidden_layer_sizes=(15, 20), random_state=4)
 # nn.fit(X_train, y_train)
@@ -77,10 +127,11 @@ df = data_train1.drop(['RUL', 'sensor22', 'sensor23', 'sensor25', 'sensor26', 's
 correlations = df.corr()
 
 # plot correlation matrix
-fig = plt.figure(figsize=(7, 5))
+fig = plt.figure(figsize=(7, 7))
 ax = fig.add_subplot(111)
 cax = ax.matshow(correlations, vmin=-1, vmax=1)
 fig.colorbar(cax)
+plt.title('Correlation between features')
 ticks = np.arange(0, 21, 1)
 ax.set_xticks(ticks)
 ax.set_yticks(ticks)
@@ -90,8 +141,8 @@ ax.set_yticklabels(list(range(1, 22)))
 plt.show()
 
 #plot all
-plt.plot(data_train1['CycleNo'], df, '-')
-plt.show()
+# plt.plot(data_train1['CycleNo'], df, '-')
+# plt.show()
 
 # plt.plot(data_train1['CycleNo'],df_normalized,'-')
 # plt.show()
