@@ -40,6 +40,7 @@ data_RUL1['Unit'] = data_RUL1.index + 1
 # print(data_RUL1.head())
 # print(data_train1.isna().sum()) # Finding NaNs
 # print(data_train1.nunique()['Unit']) # Total number of units
+print(data_train1.describe())
 
 data_train1['RUL'] = ""
 
@@ -55,17 +56,17 @@ for x in max_cycle.iloc[:, 0]:
 # print(df_mean)
 
 # It doesn't appear these columns do much, so drop:
-df = data_train1.drop(['RUL', 'sensor22', 'sensor23', 'sensor25', 'sensor26', 'sensor24', 'Unit',
+data_train1 = data_train1.drop(['sensor22', 'sensor23', 'sensor25', 'sensor26', 'sensor24', 'Unit',
                        'opset1', 'opset2', 'opset3', 'sensor1', 'sensor5', 'sensor10', 'sensor18', 'sensor16', 'sensor19'], axis=1)
 
-print(df.head())
+# print(df.head())
 
 # min_max_scaler = preprocessing.MinMaxScaler()
 # np_scaled = min_max_scaler.fit_transform(df)
 # df_normalized = pd.DataFrame(np_scaled)
 # print(df_normalized.head())
 
-X_train, X_test, y_train, y_test = train_test_split(df, data_train1["RUL"], test_size=0.90, random_state=5)
+X_train, X_test, y_train, y_test = train_test_split(data_train1.drop(['RUL'], axis=1), data_train1["RUL"], test_size=0.90, random_state=5)
 
 
 LR = linear_model.LinearRegression()
